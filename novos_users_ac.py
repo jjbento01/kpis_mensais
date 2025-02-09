@@ -77,7 +77,22 @@ def month_total(dados: dict, ws: worksheet, coluna: int, row_actual: int)->None:
             ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=normalgrayunder
             ws.cell(row=row_actual+j, column=coluna+2, value=pdl[seg].sum()/pde[seg].sum()-1).style=normalgrayunderperc
 
-
+def acrescentar_colunas_semanais(
+    #ident_de_dados: str,
+    #switch_final: str,
+    coluna: int,
+    dados: dict,
+    ws: worksheet,
+    #lista: list
+)->None:
+    df_escolhida_new: pl.DataFrame=dados['new_users_week'].sort(by=['Year', 'Week']).drop(['Year', 'Week']).tail(5)
+    df_escolhida_acc: pl.DataFrame=dados['users_ac_week'].sort(by=['Year', 'Week']).drop(['Year', 'Week']).tail(5)
+    for i, row in enumerate(df_escolhida_acc.iter_rows()):
+        for j, col in enumerate(row):
+            ws.cell(row=21+j, column=coluna+i, value=col).style=nmgrds
+    for i, row in enumerate(df_escolhida_new.iter_rows()):
+        ws.cell(row=20, column=coluna+i, value=row[0]).style=nmgrds
+        
 def coluna_ytd_semanal_logins(
     ident_de_dados: str,
     switch_final: str,

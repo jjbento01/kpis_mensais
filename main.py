@@ -323,6 +323,9 @@ def do_main()->tuple:
     valores_diarios_new_users("new_users_day", dados, ws, coluna, 20)
     coluna += valores_diarios_users(dados, ws, coluna, 21)
     month_total(dados, ws, coluna, 21)
+    coluna += 4
+    acrescentar_colunas_semanais(coluna, dados, ws)
+    
     #coluna += 4
     #month_col = coluna
     # weeks_in_year(
