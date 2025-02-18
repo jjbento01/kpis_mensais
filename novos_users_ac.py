@@ -305,4 +305,3 @@ def final_values(ultimo: datetime, linha: int,coluna: int, ws: worksheet, dados:
     ws.cell(row=linha, column=coluna, value = dados[ident_tot].sort(by=["Data"])["New_Users"][0]).style=normalgray
     for i, seg in enumerate(lista_segm):
         ws.cell(row=linha+i+1, column=coluna, value = dados[ident][seg].to_list()[0]).style=normalgray
-    
