@@ -60,47 +60,29 @@ def coluna_ytd_semanal_web_logins(
     #wb.add_named_style(tlinhagrayperc)
     #wb.add_named_style(normalgrayperc)
     #wb.add_named_style(normalgrayunderperc)
-    lista_ytd_sem_unique = [
-        sum(
-            list(
-                dados[ident_de_dados].filter(
-                    (
-                        dados[ident_de_dados]['Year']==fifth_year
-                    )&(
-                        dados[ident_de_dados]['Week']<fifth_week
-                    )
-                )[item]
-            )
-        ) for item in lista_unica
-    ]
-
-    lista_ytd_total=[sum(lista_ytd_sem_unique)]+lista_ytd_sem_unique[:2]+[
-        sum(list(dados[ident_de_dados].filter((
-            dados[ident_de_dados]['Year']==fifth_year
-        )&(
-    dados[ident_de_dados]['Week']<fifth_week))['Qtd_Logins_Uzo'])
-        )
-    ]+lista_ytd_sem_unique[-2:]
-    num_ytd = [get_data_year_week(dados, ident_de_dados, fifth_year, fifth_week, item) for item in lista]
-    num_ytd_total = [sum(num_ytd[:-1])]+num_ytd
-    coluna_ytd = [
-        last_week_ytd / sum_of_ytd - 1 if sum_of_ytd>0 else 0 for last_week_ytd, sum_of_ytd in zip(
-            num_ytd_total,
-            [tot/(fifth_week-1) if fifth_week>1 else 0 for tot in lista_ytd_total]
-        )
-    ]
-
-    for line, val in enumerate(coluna_ytd):
-        if line == 0:
-            ws.cell(row=6+line, column=coluna+2, value=val).style=tlinhagrayperc
-        else:
-            ws.cell(row=6+line, column=coluna+2, value=val).style=normalgrayperc
-    if switch_final!='Qtd_Logins_Unique':
-        return
-    numer_ult_racio = get_data_year_week(dados, ident_de_dados, fifth_year, fifth_week, 'Qtd_Logins_Unique' )
-    denom_ulti_racio = sum(list(dados['logins_week'].filter((dados['logins_week']['Year']==fifth_year )&(dados['logins_week']['Week']<fifth_week))['Qtd_Logins_Unique']))
-    ultimo_racio = numer_ult_racio / (denom_ulti_racio/(fifth_week-1)) - 1 if fifth_week>1 else 0
-    ws.cell(row=12, column=coluna+2, value=ultimo_racio).style=normalgrayperc
+    lista_dias = []
+    for item in dados[ident_de_dados].iter_rows(named=True):
+        lista_dias.append(get_first_day_of_week(item["Year"], item["Week"]))
+    dados[ident_de_dados] = dados[ident_de_dados].with_columns(pl.Series("Data", lista_dias).cast(pl.Date))
+    dados[ident_de_dados] = dados[ident_de_dados].sort(by="Data", descending=True)
+    ano=dados[ident_de_dados][0]["Data"][0].year
+    week=dados[ident_de_dados][0]["Data"][0].isocalendar().week
+    #min_year = datetime(ano,1,1)-timedelta(days=datetime(ano,1,1).isocalendar().weekday-1)
+    lista_ytd_sem_unique = dados[ident_de_dados].filter((pl.col("Year")==ano)&(pl.col("Week")<week)).select(lista_unica)
+    lista0 = dados[ident_de_dados].filter((pl.col("Year")==ano)&(pl.col("Week")==week)).select(lista_unica)
+    #lista_ytd_sem_unique_soma = lista_ytd_sem_unique.with_columns(sum(lista_unica).alias("total"))
+    lista_ytd_sem_unique_soma = lista_ytd_sem_unique.with_columns(pl.fold(0, lambda acc, s: acc + s, pl.all()).alias("sum_horizontal"))
+    lista0_soma = lista0.with_columns(pl.fold(0, lambda acc, s: acc + s, pl.all()).alias("sum_horizontal"))
+    valor_total = lista0_soma["sum_horizontal"][0]/(lista_ytd_sem_unique_soma["sum_horizontal"].sum()/lista_ytd_sem_unique_soma.shape[0])-1
+    lista_unique = dados[ident_de_dados].filter((pl.col("Year")==ano)&(pl.col("Week")<week))
+    lista_unique0 = dados[ident_de_dados].filter((pl.col("Year")==ano)&(pl.col("Week")==week))
+    ws.cell(row=6, column=coluna+2, value=valor_total).style=tlinhagrayperc
+    for i, item in enumerate(lista_unica):
+        denom = lista_ytd_sem_unique_soma[item].sum()
+        valor_total = lista0_soma[item][0]/(denom/lista_ytd_sem_unique_soma.shape[0])-1 if denom!=0 else ''
+        ws.cell(row=7+i, column=coluna+2, value=valor_total).style=normalgrayperc
+    valor_total = lista_unique0[lista[-1]][0]/(lista_unique[lista[-1]].sum()/lista_unique.shape[0])-1
+    ws.cell(row=12, column=coluna+2, value=valor_total).style=normalgrayperc
     ws.cell(row=13, column=coluna+2, value='').style=normalgrayunderperc
 
 def colunas_mensais_web_logins(dados: dict, ws: worksheet, coluna:int)->list:

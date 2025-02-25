@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
 from openpyxl.styles import NamedStyle, Side
 from icecream import ic
-import cpag
 
 from lista_queries import *
 from utilities import *
@@ -43,33 +42,31 @@ def download_all_sites(lista_queries: list[list[str,str]])->None:
     with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
         executor.map(download_site, lista_queries)
 
-
 def do_main()->tuple:
     global lista_queries_a_fazer, lista, lista_unica,dados
     download_all_sites(lista_queries_a_fazer)
-    lista_dias = dados["users_ac_week"].sort(by=["Year", "Week"]).tail(5)
-    query = f"SELECT MIN(Date) as Date FROM BD_GESTAOSQL.dbo.Calendar WHERE Year={lista_dias[0]['Year'][0]} AND JulWk={lista_dias[0]['Week'][0]}"
-    result = pl.read_database(query, engine)
-    first_day = result["Date"][0]
-    first_year = lista_dias[0]['Year'][0]
-    first_week = lista_dias[0]['Week'][0]
-    query = f"SELECT MIN(Date) as Date FROM BD_GESTAOSQL.dbo.Calendar WHERE Year={lista_dias[1]['Year'][0]} AND JulWk={lista_dias[1]['Week'][0]}"
-    result = pl.read_database(query, engine)
-    second_day = result["Date"][0]
-    second_year = lista_dias[1]['Year'][0]
-    second_week = lista_dias[1]['Week'][0]
-    query = f"SELECT MIN(Date) as Date FROM BD_GESTAOSQL.dbo.Calendar WHERE Year={lista_dias[2]['Year'][0]} AND JulWk={lista_dias[2]['Week'][0]}"
-    third_day = result["Date"][0]
-    third_year = lista_dias[2]['Year'][0]
-    third_week = lista_dias[2]['Week'][0]
-    query = f"SELECT MIN(Date) as Date FROM BD_GESTAOSQL.dbo.Calendar WHERE Year={lista_dias[3]['Year'][0]} AND JulWk={lista_dias[3]['Week'][0]}"
-    fourth_day = result["Date"][0]
-    fourth_year = lista_dias[3]['Year'][0]
-    fourth_week = lista_dias[3]['Week'][0]
-    query = f"SELECT MIN(Date) as Date FROM BD_GESTAOSQL.dbo.Calendar WHERE Year={lista_dias[4]['Year'][0]} AND JulWk={lista_dias[4]['Week'][0]}"
-    fifth_day = result["Date"][0]
-    fifth_year = lista_dias[4]['Year'][0]
-    fifth_week = lista_dias[4]['Week'][0]
+    lista_dias = []
+    for item in dados["users_ac_week"].iter_rows(named=True):
+        lista_dias.append(get_first_day_of_week(item["Year"], item["Week"]))
+    dados["users_ac_week"] = dados["users_ac_week"].with_columns(pl.Series("Data", lista_dias).cast(pl.Date))
+    #dados["users_ac_week"] = dados["users_ac_week"].with_columns(pl.struct(["Year", "Week"]).map_batches(lambda x: get_first_day_of_week(x["Year"], x["Week"])).alias("Date"))
+    dados["users_ac_week"] = dados["users_ac_week"].sort(by="Data", descending=True)
+    cinco_semanas = dados["users_ac_week"].head(5)
+    first_day = cinco_semanas["Data"][0]
+    first_year = cinco_semanas['Year'][0]
+    first_week = cinco_semanas['Week'][0]
+    second_day = cinco_semanas["Data"][1]
+    second_year = cinco_semanas['Year'][1]
+    second_week = cinco_semanas['Week'][1]
+    third_day = cinco_semanas["Data"][2]
+    third_year = cinco_semanas['Year'][2]
+    third_week = cinco_semanas['Week'][2]
+    fourth_day = cinco_semanas["Data"][3]
+    fourth_year = cinco_semanas['Year'][3]
+    fourth_week = cinco_semanas['Week'][3]
+    fifth_day = cinco_semanas["Data"][4]
+    fifth_year = cinco_semanas['Year'][4]
+    fifth_week = cinco_semanas['Week'][4]
     date_range = range_needed_of_date(datetime.today())
     [ultimo, _, primeiro_ultimo_mes, first_last_month, last_last_month] = calc_date_values()
     #[[first_day, first_year, first_week],
@@ -101,49 +98,41 @@ def do_main()->tuple:
         '      Unique Logins',
         '      Average Logins per User']
     estilos = [cabecalho, cabecalho, total, normal, normal, normal, normal, normal, normal, normal]
-    bloco_principal_logins(ws,
-                           first_last_month,
-                           last_last_month,
-                           primeiro_ultimo_mes,
-                           ultimo,
-                           lista_unica,
-                           date_range,
-                           dados,
-                           tags,
-                           estilos)
-    for coluna, iweek, iday in zip(range(7,13), (first_week, second_week, third_week, fourth_week, fifth_week), (first_day, second_day, third_day, fourth_day, fifth_day)): 
+    bloco_principal_logins(ws, first_last_month, last_last_month, primeiro_ultimo_mes, ultimo, lista_unica, date_range, dados, tags, estilos)
+    # linha com o cabeçalho das semanas
+    for coluna, iweek, iday in zip(range(7,13), (fifth_week, fourth_week, third_week, second_week, first_week), (fifth_day, fourth_day, third_day, second_day, first_day)): 
         ws.cell(row=2, column=len(date_range)+coluna, value="W"+str(iweek)).style=totalinhadir
         ws.cell(
             row=3,
             column=len(date_range)+coluna,
-            value=(iday - datetime(1899, 12, 30)).days
+            value=(datetime(iday.year, iday.month, iday.day, 0,0,0) - datetime(1899, 12, 30)).days-1
         ).style=normalshort
     medias: dict[str, float] = {item: 0 for item in lista}
     for linha, item in zip([7, 8, 9, 10, 11, 12], lista):
-        for ipos, (year, week) , sty in zip(range(7, 13),
-                                          [(first_year, first_week),
-                                           (second_year, second_week),
-                                           (third_year, third_week),
-                                           (fourth_year, fourth_week),
-                                           (fifth_year, fifth_week)],
-                                          [nmgrds, nmgrds, nmgrds, nmgrds, nmgrds]):
+        for ipos, (year, week) , sty in zip(range(7, 13), [(first_year, first_week), (second_year, second_week), (third_year, third_week), (fourth_year, fourth_week), (fifth_year, fifth_week)], [nmgrds, nmgrds, nmgrds, nmgrds, nmgrds]):
             temp = get_data_year_week(dados, 'logins_week', year, week, item)
             ws.cell(row=linha, column=len(date_range)+ipos, value=temp).style=sty
             #import ipdb; ipdb.set_trace()
-            medias[item]+=temp if not(year==fifth_year and week==fifth_week) else 0
+            medias[item]+=temp if not(year==first_year and week==first_week) else 0
 
     per_user_list: list[float] = []
 
     valores_totais: list[float] = []
-
+    lista_semanas = [
+        (first_year, first_week),
+        (second_year, second_week),
+        (third_year, third_week),
+        (fourth_year, fourth_week),
+        (fifth_year, fifth_week)
+    ]
+    lista_semanas.reverse()
+    # constroi a coluna das semanas
+    # dos logins web, sem ser os tv logins os logins tv são mais adiante
     for coluna, (year, week) in zip(
         range(7, 12),
-        [(first_year, first_week),
-         (second_year, second_week),
-         (third_year, third_week),
-         (fourth_year, fourth_week),
-         (fifth_year, fifth_week)]):
+        lista_semanas):
         temp = 0
+        # item é cada um dos membros da lista de categorias, por exemplo: "Qtd_Logins_MyMeo"
         for item in lista_unica:
             temp += get_data_year_week(dados, 'logins_week', year, week, item)
         valores_totais.append(temp)
@@ -154,8 +143,8 @@ def do_main()->tuple:
 
     coluna: int+p = len(date_range)+12
 
-    total_fifth: int = 0
-    total_fourth: int = 0
+    total_first: int = 0
+    total_second: int = 0
 
     for linha, item, color in zip(
         range(len(lista_unica)),
@@ -168,47 +157,36 @@ def do_main()->tuple:
             normalgrayperc,
             normalgrayperc
         ]):
-        temp_fifth: int = get_data_year_week(dados, 'logins_week', fifth_year, fifth_week, item)
-        temp_fourth: int = get_data_year_week(dados, 'logins_week', fourth_year, fourth_week, item)
-        rto: float = 0 if temp_fourth == 0 else temp_fifth / temp_fourth - 1
+        temp_first: int = get_data_year_week(dados, 'logins_week', first_year, first_week, item)
+        temp_second: int = get_data_year_week(dados, 'logins_week', second_year, second_week, item)
+        rto: float = 0 if temp_second == 0 else temp_first / temp_second - 1
         ws.cell(row=7+linha, column=coluna, value=rto).style=color
-        total_fifth += temp_fifth
-        total_fourth += temp_fourth
+        total_first += temp_first
+        total_second += temp_second
 
     resultado: float = get_data_year_week(dados,
         'logins_week',
-        fifth_year,
-        fifth_week,
+        first_year,
+        first_week,
         'Qtd_Logins_Unique'
     )/get_data_year_week(dados,
         'logins_week',
-        fourth_year,
-        fourth_week,
+        second_year,
+        second_week,
         'Qtd_Logins_Unique') - 1
 
     ic(resultado)
 
-    ws.cell(row=7+len(lista_unica), column=coluna, value=(
-        get_data_year_week(dados,
-            'logins_week',
-            fifth_year,
-            fifth_week,
-            'Qtd_Logins_Unique'
-        )/get_data_year_week(dados,
-            'logins_week',
-            fourth_year,
-            fourth_week,
-            'Qtd_Logins_Unique'
-        ) - 1)).style=normalgrayperc
+    ws.cell(row=7+len(lista_unica), column=coluna, value=resultado).style=normalgrayperc
 
-    ws.cell(row=6, column=coluna, value=total_fifth/total_fourth-1).style=tlinhagrayperc
+    ws.cell(row=6, column=coluna, value=total_first/total_second-1).style=tlinhagrayperc
     ws.cell(row=13, column=coluna, value=per_user_list[-1]/per_user_list[-2]-1).style=normalgrayunderperc
 
     for i, primeiralinha, segundalinha in zip(range(3), ("W"+str(fifth_week)+" vs.", "", ""), ("1w", "Avg.4w", "Avg.YTD")):
         ws.cell(row=2, column=coluna+i, value=primeiralinha).style=tlinhagrayperc
         ws.cell(row=3, column=coluna+i, value=segundalinha).style=normalgrayunder
 
-    valores_inter = [dados['logins_week'].filter((dados['logins_week']['Year']==fifth_year)&(dados['logins_week']['Week']==fifth_week))[item]/(medias[item]/4)-1 for item in lista]
+    valores_inter = [dados['logins_week'].filter((dados['logins_week']['Year']==first_year)&(dados['logins_week']['Week']==first_week))[item]/(medias[item]/4)-1 for item in lista]
     total_val = valores_totais[-1]/(sum([medias[key] for key in medias.keys()][:-1])/4)-1
     ws.cell(row=6, column=coluna+1, value=total_val).style=tlinhagrayperc
     for i, valor in enumerate(valores_inter):
@@ -242,9 +220,7 @@ def do_main()->tuple:
     coluna += 1
     valores_diarios_tv_logins(dados, ws, coluna, row_actual)
     coluna += dados['logins_day_tv'].shape[0]
-    primeiro_dia_mes = (
-        datetime(datetime.now().year, datetime.now().month, 1) - timedelta(days=1)
-    ).replace(day=1)
+    primeiro_dia_mes = (datetime(datetime.now().year, datetime.now().month, 1) - timedelta(days=1)).replace(day=1)
     ultimo_dia_mes = datetime(datetime.now().year, datetime.now().month, 1) - timedelta(days=1)
     lista_fla = total_mes_analise(dados, ws, coluna, row_actual, primeiro_dia_mes, ultimo_dia_mes)
     coluna += 1
@@ -254,13 +230,13 @@ def do_main()->tuple:
     coluna += 1
     total_mes_analise_var(ws, coluna, row_actual, lista_fla, lista_fll)
     coluna +=3
-    calculate_week_columns(dados, 'logins_week_tv', 'Qtd_Visits_Unique', ws, coluna, date_range, first_year, first_week, second_year, second_week, third_year, third_week, fourth_year, fourth_week, fifth_year, fifth_week, ['Qtd_Visits', 'Qtd_Visits_Intentional'], 15, 17)
+    calculate_week_columns(dados, 'logins_week_tv', 'Qtd_Visits_Unique', ws, coluna, date_range, fifth_year, fifth_week, fourth_year, fourth_week, third_year, third_week, second_year, second_week, first_year, first_week, ['Qtd_Visits', 'Qtd_Visits_Intentional'], 15, 17)
     coluna += 4
-    get_w48vs1w(dados, "logins_week_tv", ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'], ws, fifth_year, fifth_week, fourth_year, fourth_week, 15, coluna)
+    get_w48vs1w(dados, "logins_week_tv", ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'], ws, first_year, first_week, second_year, second_week, 15, coluna)
     coluna += 1
-    get_w48vs4w(dados, 'logins_week_tv', ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'], ws, fifth_year, fifth_week, fourth_year, fourth_week, third_year, third_week, second_year, second_week, first_year, first_week, 15, coluna)
+    get_w48vs4w(dados, 'logins_week_tv', ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'], ws, first_year, first_week, second_year, second_week, third_year, third_week, fourth_year, fourth_week, fifth_year, fifth_week, 15, coluna)
     coluna += 1
-    tv_ytd_semanal_web_logins('logins_week_tv', fifth_year, fifth_week, coluna, dados, ws, 15, ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'])
+    tv_ytd_semanal_web_logins('logins_week_tv', first_year, first_week, coluna, dados, ws, 15, ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'])
     coluna += 2
     ret: list[float] = colunas_mensais_tv_logins(dados, 'logins_month_tv', ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'], ws, 15, coluna)
     coluna += 12
@@ -268,32 +244,27 @@ def do_main()->tuple:
     coluna += 1
     tv_make_last_four_month(dados, ws, coluna, ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'], ret)
     coluna += 1
-    coluna_ytd_mensal_tv_logins(
-        'logins_month_tv',
-        fifth_year,
-        ultimo.month,
-        coluna,
-        dados,
-        ws,
-        ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'])
+    coluna_ytd_mensal_tv_logins('logins_month_tv', first_year, ultimo.month, coluna, dados, ws, ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'])
     coluna += 2
     tv_coluna_vazia(ws, 15, coluna, ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique', ''])
     
+    # -------------------------------------------------------------------------------------------------------
     # começa linhas dos novos users ac
+    # -------------------------------------------------------------------------------------------------------
     coluna = 2
     novos_users_ac_cabecalhos(ws, coluna, 20, lista_tags_users)
     coluna += 1
     valores_diarios_new_users("new_users_day", dados, ws, coluna, 20)
     coluna += valores_diarios_users(dados, ws, coluna, 21, lista_segm, 'new_users_day', 'users_ac_day', 30)
     month_total(dados, ws, coluna, 21, lista_segm, 'new_users_day', 'New_Users', 'users_ac_day', 30)
-    
+    for i in range(3): ws.cell(row=19, column=coluna+i, value='').style=normalgrayperc
     coluna += 4
     acrescentar_colunas_semanais(21, coluna, dados, ws, 'new_users_week', 'users_ac_week', 30, lista_segm)
     coluna += 5
-    
     #month_col = coluna
     # coluna += 1
-    week_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], 20, coluna, ws, dados, "users_ac_week", "New_Users", "new_users_week", lista_segm, 29)
+    week_summary_1([[fifth_year, fifth_week], [fourth_year, fourth_week], [third_year, third_week], [second_year, second_week], [first_year, first_week]], 20, coluna, ws, dados, "users_ac_week", "New_Users", "new_users_week", lista_segm, 29)
+    for i in range(3): ws.cell(row=19, column=coluna+i, value='').style=normalgrayperc
     # month_col += 9
     coluna += 3
     ic(ultimo)
@@ -302,108 +273,33 @@ def do_main()->tuple:
     months_in_year(fifth_year, primeiro_ano.month, first_year, 21, coluna, dados, ws, lista_segm, 30, "users_ac_month", "new_users_month")
     coluna += 13
     month_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], 20, coluna, ws, dados, "users_ac_month", "new_users_month", "New_Users", lista_segm, 29)
+    for i in range(3): ws.cell(row=19, column=coluna+i, value='').style=normalgrayperc
     coluna += 4
     linha = 20
     final_values(ultimo, linha, coluna, ws, dados, "users_ac_asis", "new_users_month", lista_segm)
+    ws.cell(row=19, column=coluna, value='').style=normalgrayperc
     # acaba as linhas de novos users ac
     
-    # começa linhas dos cpag
-    coluna = 2
-    linha = 31
-    fim = 35
-    novos_users_ac_cabecalhos(ws, coluna, linha+1, cpag_tags)
-    coluna += 1
-    coluna += valores_diarios_users(dados, ws, coluna, 32, listagem_cpag, None, 'cpag_day', 35)
-    month_total(dados, ws, coluna, 32, listagem_cpag, None, None, 'cpag_day', 35)
-    coluna += 4
-    acrescentar_colunas_semanais(32, coluna, dados, ws, None, "cpag_week", 35, listagem_cpag)
-    coluna += 5
-    week_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], 31, coluna, ws, dados, "cpag_week", None, None, listagem_cpag, 34)
-    coluna += 3
-    months_in_year(fifth_year, primeiro_ano.month, first_year, 32, coluna, dados, ws, listagem_cpag, 35, "cpag_month", None)
-    coluna += 13
-    month_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], 31, coluna, ws, dados, "cpag_month", None, None, listagem_cpag, 34)
-    coluna += 4
-    for i in range(linha, fim+1): ws.cell(row=i, column=coluna, value='').style=(normalgrayperc if i < fim else normalgrayunderperc)
-    # fim das linhas dos cpag
-    
-    # começa linhas de carregamentos
-    coluna = 2
-    linha = 37
-    fim = 40
-    novos_users_ac_cabecalhos(ws, coluna, linha, carg_tags)
-    coluna += 1
-    coluna += valores_diarios_users(dados, ws, coluna, linha, listagem_carg, None, 'cpag_day', 40)
-    month_total(dados, ws, coluna, linha, listagem_carg, None, None, 'cpag_day', 40)
-    coluna += 4
-    acrescentar_colunas_semanais(linha, coluna, dados, ws, None, "cpag_week", 40, listagem_carg)
-    coluna += 5
-    week_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], linha-1, coluna, ws, dados, "cpag_week", None, None, listagem_carg, 39)
-    coluna += 3
-    months_in_year(fifth_year, primeiro_ano.month, first_year, linha, coluna, dados, ws, listagem_carg, 40, "cpag_month", None)
-    coluna += 13
-    month_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], linha-1, coluna, ws, dados, "cpag_month", None, None, listagem_carg, 40)
-    coluna += 4
-    for i in range(linha, fim+1): ws.cell(row=i, column=coluna, value='').style=(normalgrayperc if i < fim else normalgrayunderperc)
-    # fim das linhas dos carg
-    
-    # começa linhas de carregamentos
-    coluna = 2
-    linha = 37
-    fim = 40
-    novos_users_ac_cabecalhos(ws, coluna, linha, carg_tags)
-    coluna += 1
-    coluna += valores_diarios_users(dados, ws, coluna, linha, listagem_carg, None, 'cpag_day', 40)
-    month_total(dados, ws, coluna, linha, listagem_carg, None, None, 'cpag_day', 40)
-    coluna += 4
-    acrescentar_colunas_semanais(linha, coluna, dados, ws, None, "cpag_week", 40, listagem_carg)
-    coluna += 5
-    week_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], linha-1, coluna, ws, dados, "cpag_week", None, None, listagem_carg, 39)
-    coluna += 3
-    months_in_year(fifth_year, primeiro_ano.month, first_year, linha, coluna, dados, ws, listagem_carg, 40, "cpag_month", None)
-    coluna += 13
-    month_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], linha-1, coluna, ws, dados, "cpag_month", None, None, listagem_carg, 40)
-    coluna += 4
-    for i in range(linha, fim+1): ws.cell(row=i, column=coluna, value='').style=(normalgrayperc if i < fim else normalgrayunderperc)
-    # fim das linhas dos carg
-    # Início de pagamentos por AC €
-    coluna = 2
-    linha = 42
-    fim = 45
-    novos_users_ac_cabecalhos(ws, coluna, linha, euro_pag_tags)
-    coluna += 1
-    coluna += valores_diarios_users(dados, ws, coluna, linha, listagem_euro_pag, None, 'cpag_day', 45)
-    month_total(dados, ws, coluna, linha, listagem_euro_pag, None, None, 'cpag_day', 45)
-    coluna += 4
-    acrescentar_colunas_semanais(linha, coluna, dados, ws, None, "cpag_week", 45, listagem_euro_pag)
-    coluna += 5
-    week_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], linha-1, coluna, ws, dados, "cpag_week", None, None, listagem_euro_pag, 44)
-    coluna += 3
-    months_in_year(fifth_year, primeiro_ano.month, first_year, linha, coluna, dados, ws, listagem_euro_pag, 45, "cpag_month", None)
-    coluna += 13
-    month_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], linha-1, coluna, ws, dados, "cpag_month", None, None, listagem_euro_pag, 44)
-    coluna += 4
-    for i in range(linha, fim+1): ws.cell(row=i, column=coluna, value='').style=(normalgrayperc if i < fim else normalgrayunderperc)
-    # Fim de pagamentos por AC €
-    # Início de Carregamentos por AC €
-    coluna = 2
-    linha = 47
-    fim = 50
-    novos_users_ac_cabecalhos(ws, coluna, linha, euro_car_tags)
-    coluna += 1
-    coluna += valores_diarios_users(dados, ws, coluna, linha, listagem_euro_car, None, 'cpag_day', fim)
-    month_total(dados, ws, coluna, linha, listagem_euro_car, None, None, 'cpag_day', fim)
-    coluna += 4
-    acrescentar_colunas_semanais(linha, coluna, dados, ws, None, "cpag_week", fim, listagem_euro_car)
-    coluna += 5
-    week_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], linha-1, coluna, ws, dados, "cpag_week", None, None, listagem_euro_car, fim - 1)
-    coluna += 3
-    months_in_year(fifth_year, primeiro_ano.month, first_year, linha, coluna, dados, ws, listagem_euro_car, fim, "cpag_month", None)
-    coluna += 13
-    month_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], linha-1, coluna, ws, dados, "cpag_month", None, None, listagem_euro_car, fim - 1)
-    coluna += 4
-    for i in range(linha, fim+1): ws.cell(row=i, column=coluna, value='').style=(normalgrayperc if i < fim else normalgrayunderperc)
-    # Fim de Carregamentos por AC €
+    for composto in lista_iteracoes:
+        [coluna, linha, fim, tags, listagem] = composto
+        fim += linha
+        novos_users_ac_cabecalhos(ws, coluna, linha, tags)
+        coluna += 1
+        coluna += valores_diarios_users(dados, ws, coluna, linha, listagem, None, 'cpag_day', fim)
+        month_total(dados, ws, coluna, linha, listagem, None, None, 'cpag_day', fim)
+        coluna += 4
+        acrescentar_colunas_semanais(linha, coluna, dados, ws, None, "cpag_week", fim, listagem)
+        coluna += 5
+        week_summary_1([[fifth_year, fifth_week], [fourth_year, fourth_week], [third_year, third_week], [second_year, second_week], [first_year, first_week]], linha-1, coluna, ws, dados, "cpag_week", None, None, listagem, fim-1)
+        coluna += 3
+        months_in_year(fifth_year, primeiro_ano.month, first_year, linha, coluna, dados, ws, listagem, fim, "cpag_month", None)
+        coluna += 13
+        month_summary_1([[fifth_year, fifth_week], [fourth_year, fourth_week], [third_year, third_week], [second_year, second_week], [first_year, first_week]], linha-1, coluna, ws, dados, "cpag_month", None, None, listagem, fim-1)
+        coluna += 4
+        for i in range(linha-1, fim+1): ws.cell(row=i, column=coluna, value='').style=(normalgrayperc if i < fim else normalgrayunderperc)
+        # fim das linhas dos cpag
+        # Fim de Carregamentos por AC €
+
     wb.save("sample.xlsx")
     engine.dispose()
     return (dados, valores_inter, medias)

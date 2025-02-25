@@ -70,16 +70,29 @@ def month_total(dados: dict, ws: worksheet, coluna: int, row_actual: int, lista_
         if (j+row_actual) < limite_maximo:
             ws.cell(row=row_actual+j, column=coluna, value=pdl[seg].sum()).style=normalgray
             ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=normalgray
-            ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()>0 else '')).style=normalgrayperc
+            ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()!=0 else '')).style=normalgrayperc
         else:
             ws.cell(row=row_actual+j, column=coluna, value=pdl[seg].sum()).style=normalgrayunder
             ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=normalgrayunder
-            ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()>0 else '')).style=normalgrayunderperc
+            ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()!=0 else '')).style=normalgrayunderperc
 
 def acrescentar_colunas_semanais(inicio: int, coluna: int, dados: dict[str, pl.DataFrame], ws: worksheet, head: str, body: str, limite_maximo: int, lista_segm: list[str])->None:
     if head is not None:
-        df_escolhida_new: pl.DataFrame=dados[head].sort(by=['Year', 'Week']).drop(['Year', 'Week']).tail(5)
-    df_escolhida_acc: pl.DataFrame=dados[body].sort(by=['Year', 'Week']).drop(['Year', 'Week']).tail(5)
+        df_escolhida_new: pl.DataFrame=dados[head].with_columns(
+            pl.struct(["Year", "Week"]).map_elements(
+                lambda x: 
+                    get_first_day_of_week(x["Year"], x["Week"]),
+                    return_dtype=pl.Datetime
+            ).alias("Data")
+        ).sort(by=["Data"]).tail(5)
+        #df_escolhida_new: pl.DataFrame=dados[head].sort(by=['Year', 'Week']).drop(['Year', 'Week']).tail(5)
+    df_escolhida_acc: pl.DataFrame = dados[body].with_columns(
+            pl.struct(["Year", "Week"]).map_elements(
+                lambda x: 
+                    get_first_day_of_week(x["Year"], x["Week"]),
+                    return_dtype=pl.Datetime
+            ).alias("Data")
+        ).sort(by=["Data"]).tail(5)
     for i, row in enumerate(lista_segm):
         for j, col in enumerate(df_escolhida_acc[row].to_list()):
             if (i+inicio) < limite_maximo:
@@ -159,28 +172,54 @@ def week_summary_1(
     ind_total: str,
     lista_segm: list[str],
     limite_maximo: int)->None:
+    dados[indice] = dados[indice].with_columns(
+        pl.struct(["Year", "Week"]).map_elements(
+            lambda x: 
+                get_first_day_of_week(x["Year"], x["Week"]),
+                return_dtype=pl.Datetime
+        ).alias("Data")
+    ).sort(by=["Data"])
+    
     if ind_total is not None:
-        primeira_coluna_denom = dados[ind_total].filter((pl.col('Year')==lista_pares[4][0])&(pl.col('Week')==lista_pares[4][1]))
-        primeira_coluna_numer = dados[ind_total].filter((pl.col('Year')==lista_pares[3][0])&(pl.col('Week')==lista_pares[3][1]))   
-        perc = primeira_coluna_denom[ind_acc]/primeira_coluna_numer[ind_acc] - 1.0
-        ws.cell(row=linha, column=coluna, value=perc[0]).style=normalgrayperc
-        soma_denom = sum([dados[ind_total].filter((pl.col('Year')==lista_pares[3][0])&(pl.col('Week')==lista_pares[3][1]))[ind_acc] for i in range(4)])
-        perc = primeira_coluna_denom[ind_acc]/(soma_denom / 4.0) - 1.0
-        ws.cell(row=linha, column=coluna+1, value=perc[0]).style=normalgrayperc
-        total_denom = dados[ind_total].filter((pl.col('Year')==lista_pares[4][0])&(pl.col('Week')<lista_pares[4][1]))[ind_acc].sum()
-        perc = primeira_coluna_denom[ind_acc]/total_denom
-        ws.cell(row=linha, column=coluna+2, value=perc[0]).style=normalgrayperc
+        dados[ind_total] = dados[ind_total].with_columns(
+            pl.struct(["Year", "Week"]).map_elements(
+                lambda x: 
+                    get_first_day_of_week(x["Year"], x["Week"]),
+                    return_dtype=pl.Datetime
+            ).alias("Data")
+        ).sort(by=["Data"])
+        perc = dados[ind_total][-1][ind_acc][0]/dados[ind_total][-2][ind_acc][0] - 1
+        ws.cell(row=linha, column=coluna, value=perc).style=normalgrayperc
+        df_4 = dados[ind_total].tail(5)
+        df_40 = df_4.filter((pl.col('Year')==lista_pares[4][0])&(pl.col('Week')==lista_pares[4][1]))
+        df_41 = df_4.filter(pl.col('Week')!=lista_pares[4][1])
+        df_41s = df_41.select(ind_acc).sum()
+        perc = df_40[ind_acc][0]/(df_41s[ind_acc][0]/df_41.shape[0]) - 1
+        ws.cell(row=linha, column=coluna+1, value=perc).style=normalgrayperc
+        df_501 = dados[ind_total].filter((pl.col('Year')==lista_pares[4][0])&(pl.col('Week')==lista_pares[4][1])) 
+        df_50 = dados[ind_total].filter((pl.col('Year')==lista_pares[4][0])&(pl.col('Week')<lista_pares[4][1]))
+        df_50s = df_50.select(ind_acc).select(pl.sum("^.*$"))
+        perc = df_501[ind_acc][0] / (df_50s[ind_acc][0]/df_50.shape[0]) - 1.0
+        ws.cell(row=linha, column=coluna+2, value=perc).style=normalgrayperc
+    if ind_total is not None:
+        for i in range(3): ws.cell(row=linha-1, column=coluna+i, value='').style=normalgrayperc
+    else:
+        for i in range(3): ws.cell(row=linha, column=coluna+i, value='').style=normalgrayperc
     for i, item in enumerate(lista_segm):
-        primeira_coluna_denom = dados[indice].filter((pl.col('Year')==lista_pares[4][0])&(pl.col('Week')==lista_pares[4][1]))[item]
-        primeira_coluna_numer = dados[indice].filter((pl.col('Year')==lista_pares[3][0])&(pl.col('Week')==lista_pares[3][1]))[item]
-        perc = primeira_coluna_denom/primeira_coluna_numer - 1.0
-        ws.cell(row=linha+i+1, column=coluna, value=perc[0]).style=(normalgrayperc if (i+linha) < limite_maximo else normalgrayunderperc)
+        primeira_coluna_denom = dados[indice].filter((pl.col('Year')==lista_pares[4][0])&(pl.col('Week')==lista_pares[4][1])).select(item)
+        primeira_coluna_numer = dados[indice].filter((pl.col('Year')==lista_pares[3][0])&(pl.col('Week')==lista_pares[3][1])).select(item)
+        perc = float(primeira_coluna_denom[item][0])/float(primeira_coluna_numer[item][0]) - 1.0 if primeira_coluna_numer[item][0]!=0 else ''
+        ws.cell(row=linha+i+1, column=coluna, value=perc).style=normalgrayperc if (i+linha) < limite_maximo else normalgrayunderperc
         soma_denom=sum([dados[indice].filter((pl.col('Year')==lista_pares[i][0])&(pl.col('Week')==lista_pares[i][1]))[item] for i in range(4)])
-        perc = (float(primeira_coluna_denom[0])/(float(soma_denom[0])/4.0) - 1.0) if soma_denom[0]>0 else ''
+        perc = (float(primeira_coluna_denom[0][item][0])/(float(soma_denom[0])/4.0) - 1.0) if soma_denom[0]!=0 else ''
         ws.cell(row=linha+i+1, column=coluna+1, value=perc).style=(normalgrayperc if (i+linha) < limite_maximo else normalgrayunderperc)
-        total_denom = dados[indice].filter((pl.col('Year')==lista_pares[4][0])&(pl.col('Week')<lista_pares[4][1]))[item].sum()
-        perc = primeira_coluna_denom[0]/total_denom if total_denom>0 else ''
-        ws.cell(row=linha+i+1, column=coluna+2, value=perc).style=(normalgrayperc if (i+linha) < limite_maximo else normalgrayunderperc)
+        np = dados[indice][-1]['Week'][0]
+        npm1 = np - 1
+        denom=dados[indice].tail(np).head(npm1).select(item).select(pl.sum(item))[0][item][0]/npm1
+        numer = dados[indice].select(item)[-1][item][0]
+        perc= numer/denom - 1 if denom!=0 else ''
+        #perc = float(primeira_coluna_denom[0][item][0])/float(total_denom) - 1.0 if total_denom!=0 else ''
+        ws.cell(row=linha+i+1, column=coluna+2, value=perc).style=normalgrayperc if (i+linha) < limite_maximo else normalgrayunderperc
 
 def months_in_year(
     ano: int,
@@ -222,8 +261,9 @@ def months_in_year(
             mes += 1 
         #ws.cell(row=20, column=(mes+coluna), value = total).style=normal
     if ident_local is not None:
-        for i, row in enumerate(dados[ident_local].sort(by=["Year", "Month"])[-12:].iter_rows()):
-            ws.cell(row=20, column=(coluna +  i+ 1), value = row[2]).style=(nmgrds if linha+i<listagem_maximo else nmgrdsund)
+        dados_idf = dados[ident_local].with_columns((pl.col("Year").cast(pl.Utf8) + "-" + pl.col("Month").cast(pl.Utf8) + "-01").str.strptime(pl.Date, "%Y-%m-%d").alias("Data"))
+        for i, row in enumerate(dados_idf.sort(by=["Data"])[-12:].iter_rows()):
+            ws.cell(row=linha-1, column=(coluna +  i+ 1), value = row[2]).style=nmgrds
         
 def month_summary_1(
     lista_pares: list[list[int, int]], 
@@ -277,6 +317,7 @@ def month_summary_1(
     lista_anos = [year_penultimo, year_antepenultimo, year_anteantepenultimo, year_primeiro]
     lista_meses = [month_penultimo, month_antepenultimo, month_anteantepenultimo, month_primeiro]
     ultima_data = dados[indice].sort(by=["Data"])[-1]["Data"][0]
+    for i in range(3): ws.cell(row=linha, column=coluna+i, value='').style=normalgrayperc
     if ind_total is not None:
         primeira_coluna_denom = dados[ind_total].filter((pl.col('Year')==year_ultimo)&(pl.col('Month')==month_ultimo))
         primeira_coluna_numer = dados[ind_total].filter((pl.col('Year')==year_antepenultimo)&(pl.col('Month')==month_penultimo))   
@@ -289,6 +330,7 @@ def month_summary_1(
         total_denom = dados[ind_total].filter(pl.col('Data')<=ultima_data)["New_Users"].sum()
         perc = primeira_coluna_denom["New_Users"]/total_denom
         ws.cell(row=linha, column=coluna+2, value=perc[0]).style=normalgrayperc
+    
     for i, item in enumerate(lista_segm):
         primeira_coluna_denom = dados[indice].filter((pl.col('Year')==year_ultimo)&(pl.col('Month')==month_ultimo))[item]
         primeira_coluna_numer = dados[indice].filter((pl.col('Year')==year_penultimo)&(pl.col('Month')==month_penultimo))[item]

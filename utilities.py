@@ -1,7 +1,19 @@
 from datetime import datetime, timedelta
 from typing import *
-
+from sqlalchemy import create_engine, engine
+import codecs
+import os
+from yaml import load, FullLoader
 import polars as pl
+
+#with codecs.open(str(os.getenv("CONFS"))+"conf_dba\\configuracao.yaml", "r", "utf-8") as fich:
+#    config = load(fich, Loader=FullLoader)
+#    string_conf = config['con_str_0']
+
+#bd: str ='BD_GESTAOSQL'
+#engine: engine = create_engine(f'mssql+pyodbc:///?odbc_connect={ string_conf };DATABASE='+bd)
+
+
 day_of_week = {
     0: "Mon",
     1: "Tue",
@@ -12,34 +24,10 @@ day_of_week = {
     6: "Sun"
 }
 
-def getdays_for_week(ultimo: datetime)->list:
-    first_day = ultimo - timedelta(weeks=5)
-    first_day_week = first_day - timedelta(days=first_day.weekday())
-    first_year = first_day.year
-    first_week = first_day.isocalendar()[1]
-    second_day = ultimo - timedelta(weeks=4)
-    second_day_week = second_day - timedelta(days=second_day.weekday())
-    second_year = second_day.year
-    second_week = second_day.isocalendar()[1]
-    third_day = ultimo - timedelta(weeks=3)
-    third_day_week = third_day - timedelta(days=third_day.weekday())
-    third_year = third_day.year
-    third_week = third_day.isocalendar()[1]
-    fourth_day = ultimo - timedelta(weeks=2)
-    fourth_day_week = fourth_day - timedelta(days=fourth_day.weekday())
-    fourth_year = fourth_day.year
-    fourth_week = fourth_day.isocalendar()[1]
-    ultimo_day_week = ultimo - timedelta(days=ultimo.weekday())
-    fifth_year = ultimo.year
-    if ultimo.month==12 and ultimo.isocalendar().week==1:
-        fifth_week = 52
-    else:
-        fifth_week = fourth_week+1
-    return [[first_day_week, first_year, first_week], 
-            [second_day_week, second_year, second_week], 
-            [third_day_week, third_year, third_week], 
-            [fourth_day_week, fourth_year, fourth_week], 
-            [ultimo_day_week, fifth_year, fifth_week]]
+def get_first_day_of_week(year, week):
+    first_day_of_year = datetime(year, 1, 1)
+    first_week_start = first_day_of_year - timedelta(days=first_day_of_year.weekday())
+    return first_week_start + timedelta(weeks=week-1)
 
 def edate(data: datetime)->datetime:
     temp = data.replace(day=1)
@@ -65,26 +53,10 @@ def get_day(tabela: str, key: str,dados: dict, day: datetime.date)->int:
     return list(dados[tabela].filter(dados[tabela][key] == day.date())[tabela])[0]
             
 def get_data_year_week(dados: dict, key: str, year: int, week: int, col: str)->int:
-    return list(
-        dados[key].filter(
-            (
-                dados[key]["Year"] == year
-            ) & (
-                dados[key]["Week"] == week
-            )
-        )[col]
-    )[0]
+    return list(dados[key].filter((dados[key]["Year"] == year) & (dados[key]["Week"] == week))[col])[0]
     
-def get_data_year_month(dados: dict, key: str, year: int, week: int, col: str)->int:
-    return list(
-        dados[key].filter(
-            (
-                dados[key]["Year"] == year
-            ) & (
-                dados[key]["Month"] == week
-            )
-        )[col]
-    )[0]
+def get_data_year_month(dados: dict, key: str, year: int, month: int, col: str)->int:
+    return list(dados[key].filter((dados[key]["Year"] == year) & (dados[key]["Month"] == month))[col])[0]
 
 
 def calc_date_values()->list:

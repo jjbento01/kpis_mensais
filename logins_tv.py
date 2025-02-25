@@ -93,7 +93,7 @@ def get_w48vs1w(dados: dict, tabela: str, lista: list, ws: worksheet, fifth_year
     for i, item in enumerate(lista):
         numerador = get_data_year_week(dados, tabela, fifth_year, fifth_week, item)
         denominador = get_data_year_week(dados, tabela, fourth_year, fourth_week, item)
-        ws.cell(row=row+i, column=coluna, value=(numerador/denominador) if denominador!=0 else 0-1).style=normalgrayperc
+        ws.cell(row=row+i, column=coluna, value=(numerador/denominador-1) if denominador!=0 else 0-1).style=normalgrayperc
     nom1 = get_data_year_week(dados, tabela, fifth_year, fifth_week, lista[0])
     den1 = get_data_year_week(dados, tabela, fifth_year, fifth_week, lista[-1])
     nomt1 = (nom1/den1) if den1!=0 else 0
@@ -128,29 +128,19 @@ def get_w48vs4w(dados: dict, tabela: str, lista: list, ws: worksheet,
     den = get_data_year_week(dados, tabela, fifth_year, fifth_week, lista[-1])
     numerador = (nom/den) if den!=0 else 0
     ws.cell(row=row+len(lista), column=coluna, value=((numerador/(racio/4)) if racio!=0 else 0)-1).style=normalgrayunderperc
-        
+    
+#def tv_ytd_geral(ident_de_dados: str, fifth_year: int, fifth_week: int, coluna: int, dados: dict, ws: worksheet, row: int, lista: list)-> None:
+    
 def tv_ytd_semanal_web_logins(ident_de_dados: str, fifth_year: int, fifth_week: int, coluna: int, dados: dict, ws: worksheet, row: int, lista: list)-> None:
-    lista_ytd = [
-        sum(
-            list(
-                dados[ident_de_dados].filter(
-                    (
-                        dados[ident_de_dados]['Year']==fifth_year
-                    )&(
-                        dados[ident_de_dados]['Week']<fifth_week
-                    )
-                )[item]
-            )
-        ) for item in lista
-    ]
-    #retlst = []
+    lista_ytd = dados[ident_de_dados].filter((pl.col("Year")==fifth_year)&(pl.col("Week")<fifth_week)).select(lista)
+    lista_ago = dados[ident_de_dados].filter((pl.col("Year")==fifth_year)&(pl.col("Week")==fifth_week)).select(lista)
+    lista_sum = lista_ytd.select(pl.sum("^.*$"))
+    lista_sum = lista_sum / lista_ytd.shape[0]
+    resumo = lista_ago/lista_sum-1
     ws.cell(row=row-1, column=coluna, value='').style=normalgrayperc
     for i, item in enumerate(lista):
-        num = get_data_year_week(dados, ident_de_dados, fifth_year, fifth_week, item)
-        den = (fifth_week-1)
-        valor = num/den if den!=0 else 0
-        ws.cell(row=row+i, column=coluna, value=valor-1).style=normalgrayperc
-    ws.cell(row=row+len(lista), column=coluna, value='').style=normalgrayunder
+        ws.cell(row=row+i, column=coluna, value=resumo[item][0]).style=normalgrayperc
+    ws.cell(row=row+len(lista), column=coluna, value='').style=normalgrayunderperc
     
 def colunas_mensais_tv_logins(dados: dict, tabela: str, lista: list, ws: worksheet, linha: int, coluna:int)->list:
     pda=dados[tabela].with_columns(("0"+pl.col('Month').cast(pl.String)).str.slice(-2).alias('daystr'))

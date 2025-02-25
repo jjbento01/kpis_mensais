@@ -93,6 +93,11 @@ nmgrds = NamedStyle(name="nmgrds")
 nmgrds.font = Font(name='Calibri',bold=False, size=8)
 nmgrds.number_format = '#,##'   
 
+nmgrdsund = NamedStyle(name="nmgrdsund")
+nmgrdsund.font = Font(name='Calibri',bold=False, size=8)
+nmgrdsund.number_format = '#,##'   
+nmgrdsund.border = Border(bottom=Side(style='thin', color="000000"))
+
 normalgray = NamedStyle(name="normalgray")
 normalgray.font = Font(name='Calibri',bold=False, size=8)
 normalgray.fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
@@ -153,3 +158,4 @@ def carregar_format(wb: Workbook)->None:
     wb.add_named_style(totalinhadir)
     wb.add_named_style(monthyearsimple)
     wb.add_named_style(normalgrayunderpercenter)
+    wb.add_named_styel(nmgrdsund)
