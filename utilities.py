@@ -53,8 +53,20 @@ def get_day(tabela: str, key: str,dados: dict, day: datetime.date)->int:
     return list(dados[tabela].filter(dados[tabela][key] == day.date())[tabela])[0]
             
 def get_data_year_week(dados: dict, key: str, year: int, week: int, col: str)->int:
-    return list(dados[key].filter((dados[key]["Year"] == year) & (dados[key]["Week"] == week))[col])[0]
-    
+    """
+    Function to get the value of a given column in a given week of a given year in a given table
+    :param dados: dictionary with the dataframes of the tables
+    :param key: key of the table in the dictionary
+    :param year: year to get the data
+    :param week: week to get the data
+    :param col: name of thecolumn to get the data
+    :return: the value of the column in the given week of the given year in the given table
+    """   
+    sdt = dados[key].with_columns(pl.struct(["Year", "Week"]).map_elements(lambda x: get_first_day_of_week(x["Year"], x["Week"]), return_dtype=pl.Datetime).alias("Data")).sort(by=["Data"]) 
+    ddt = sdt.filter(pl.col("Data")==sdt.filter((pl.col("Year")==year)&(pl.col("Week")==week))["Data"][0])
+    dfd = ddt.group_by("Data").agg(pl.exclude(["Year", "Week"]).sum())
+    return dfd[col][0]
+
 def get_data_year_month(dados: dict, key: str, year: int, month: int, col: str)->int:
     return list(dados[key].filter((dados[key]["Year"] == year) & (dados[key]["Month"] == month))[col])[0]
 
