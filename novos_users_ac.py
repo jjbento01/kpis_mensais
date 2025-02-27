@@ -19,14 +19,14 @@ def novos_users_ac_cabecalhos(ws: worksheet, coluna: int, row_actual:int, tags: 
         ws.cell(row=row_actual+i-1, column=coluna,  value=tag).style=sty
     ws.cell(row=row_actual+i, column=coluna, value=tags[-1]).style=normalunder
 
-def valores_diarios_new_users(tabela: str, dados: dict, ws: worksheet, coluna: int, row_actual: int)->None:
+def valores_diarios_new_users(tabela: str, dados: dict, ws: worksheet, coluna: int, row_actual: int, nrml: any)->None:
     primeiro = first_day_a_year_ago(datetime.today().date())
     ultimo = last_day_of_last_month(datetime.today()).date()
     pdd = dados[tabela].filter((pl.col('Date')>=primeiro)&(pl.col('Date')<=ultimo)).sort(by="Date")
     for i, row in enumerate(pdd.iter_rows()):
-        ws.cell(row=row_actual, column=coluna+i, value=row[1]).style=normal
+        ws.cell(row=row_actual, column=coluna+i, value=row[1]).style=nrml
 
-def valores_diarios_users(dados: dict, ws: worksheet, coluna: int, row_actual: int, lista_segm: list[str], topo: str, corpo: str, limite_linhas: int)->int:
+def valores_diarios_users(dados: dict, ws: worksheet, coluna: int, row_actual: int, lista_segm: list[str], topo: str, corpo: str, limite_linhas: int, nrml: any, mptmid: any, mptund: any)->int:
     primeiro = first_day_a_year_ago(datetime.today().date())
     ultimo = last_day_of_last_month(datetime.today()).date()
     if topo is not None:
@@ -39,15 +39,15 @@ def valores_diarios_users(dados: dict, ws: worksheet, coluna: int, row_actual: i
         lista=pdd.filter(pl.col('Date')==dia)
         if topo is not None:
             val=pcd.filter(pl.col('Date')==dia)['New_Users'].to_list()[0]
-            ws.cell(row=row_actual, column=coluna+i, value=val).style=normal
+            ws.cell(row=row_actual, column=coluna+i, value=val).style=nrml
         for j, seg in enumerate(lista_segm):
             if (j+row_actual) < limite_linhas:
-                ws.cell(row=row_actual+j, column=coluna+i, value=0 if lista[seg].shape[0]==0 else lista[seg].to_list()[0]).style=nmgrds
+                ws.cell(row=row_actual+j, column=coluna+i, value=0 if lista[seg].shape[0]==0 else lista[seg].to_list()[0]).style=mptmid
             else:
-                ws.cell(row=row_actual+j, column=coluna+i, value=0 if lista[seg].shape[0]==0 else lista[seg].to_list()[0]).style=nmgrdsund
+                ws.cell(row=row_actual+j, column=coluna+i, value=0 if lista[seg].shape[0]==0 else lista[seg].to_list()[0]).style=mptund
     return len(the_range)
 
-def month_total(dados: dict, ws: worksheet, coluna: int, row_actual: int, lista_segm: list[str], head: str, fld_head: str, body: str, limite_maximo: int)->None:
+def month_total(dados: dict, ws: worksheet, coluna: int, row_actual: int, lista_segm: list[str], head: str, fld_head: str, body: str, limite_maximo: int, nrmgray: any, nrmgrayund: any, nrmgryp: any, nrmgrypund: any)->None:
     ultimo = last_day_of_last_month(datetime.today()).date()
     primeiro = datetime(ultimo.year, ultimo.month, 1).date()
     ante_ultimo = edate(datetime(datetime.today().year, datetime.today().month,1) -timedelta(days=1))
@@ -59,18 +59,18 @@ def month_total(dados: dict, ws: worksheet, coluna: int, row_actual: int, lista_
     pdd = dados[body].sort(by="Date")
     pdl = pdd.filter((pl.col('Date')>=primeiro)&(pl.col('Date')<=ultimo))
     pde = pdd.filter((pl.col('Date')>=ante_primeiro)&(pl.col('Date')<=ante_ultimo))
-    ws.cell(row=row_actual-1, column=coluna, value='').style=normalgray
-    ws.cell(row=row_actual-1, column=coluna+1, value='').style=normalgray
-    ws.cell(row=row_actual-1, column=coluna+2, value='').style=normalgray
+    ws.cell(row=row_actual-1, column=coluna, value='').style=nrmgray
+    ws.cell(row=row_actual-1, column=coluna+1, value='').style=nrmgray
+    ws.cell(row=row_actual-1, column=coluna+2, value='').style=nrmgray
     if head is not None:
-        ws.cell(row=row_actual-1, column=coluna, value=pcl[fld_head].sum()).style=normalgray
-        ws.cell(row=row_actual-1, column=coluna+1, value=pce[fld_head].sum()).style=normalgray
-        ws.cell(row=row_actual-1, column=coluna+2, value=pcl[fld_head].sum()/pce[fld_head].sum() - 1).style=normalgrayperc
+        ws.cell(row=row_actual-1, column=coluna, value=pcl[fld_head].sum()).style=nrmgray
+        ws.cell(row=row_actual-1, column=coluna+1, value=pce[fld_head].sum()).style=nrmgray
+        ws.cell(row=row_actual-1, column=coluna+2, value=pcl[fld_head].sum()/pce[fld_head].sum() - 1).style=nrmgryp
     for j, seg in enumerate(lista_segm):
         if (j+row_actual) < limite_maximo:
-            ws.cell(row=row_actual+j, column=coluna, value=pdl[seg].sum()).style=normalgray
-            ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=normalgray
-            ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()!=0 else '')).style=normalgrayperc
+            ws.cell(row=row_actual+j, column=coluna, value=pdl[seg].sum()).style=nrmgray
+            ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=nrmgray
+            ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()!=0 else '')).style=nrmgryp
         else:
             ws.cell(row=row_actual+j, column=coluna, value=pdl[seg].sum()).style=normalgrayunder
             ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=normalgrayunder
@@ -84,15 +84,17 @@ def acrescentar_colunas_semanais(inicio: int, coluna: int, dados: dict[str, pl.D
                     get_first_day_of_week(x["Year"], x["Week"]),
                     return_dtype=pl.Datetime
             ).alias("Data")
-        ).sort(by=["Data"]).tail(5)
+        ).sort(by=["Data"])
+        df_escolhida_new = df_escolhida_new.group_by("Data").agg(pl.exclude(["Year", "Week"]).sum()).tail(5)
         #df_escolhida_new: pl.DataFrame=dados[head].sort(by=['Year', 'Week']).drop(['Year', 'Week']).tail(5)
     df_escolhida_acc: pl.DataFrame = dados[body].with_columns(
-            pl.struct(["Year", "Week"]).map_elements(
-                lambda x: 
-                    get_first_day_of_week(x["Year"], x["Week"]),
-                    return_dtype=pl.Datetime
-            ).alias("Data")
-        ).sort(by=["Data"]).tail(5)
+        pl.struct(["Year", "Week"]).map_elements(
+            lambda x: 
+                get_first_day_of_week(x["Year"], x["Week"]),
+                return_dtype=pl.Datetime
+        ).alias("Data")
+    ).sort(by=["Data"])
+    df_escolhida_acc = df_escolhida_acc.group_by("Data").agg(pl.exclude(["Year", "Week"]).sum()).tail(5)
     for i, row in enumerate(lista_segm):
         for j, col in enumerate(df_escolhida_acc[row].to_list()):
             if (i+inicio) < limite_maximo:
@@ -232,7 +234,9 @@ def months_in_year(
     lista_segm: list[str],
     listagem_maximo: int,
     ident: str,
-    ident_local: str
+    ident_local: str,
+    nmr: any,
+    nmrsund: any,
 )->None:
     # lista_segm = [
     #     'ACC_Total',

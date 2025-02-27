@@ -15,7 +15,8 @@ from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Fo
 from openpyxl.styles import NamedStyle, Side
 from icecream import ic
 
-from lista_queries import *
+
+from lista_queries import lista, lista_unica, lista_tags_users, lista_segm, lista_iteracoes, lista_queries_a_fazer, tags_logins
 from utilities import *
 from formatos import *
 from logins import *
@@ -86,19 +87,9 @@ def do_main()->tuple:
     ws.title="Report"
     ws.column_dimensions['A'].width=5
     ws.column_dimensions['B'].width=30
-    tags = [
-        'Área de Cliente',
-        '',
-        'Logins Web',
-        '      Logins My Meo',
-        '      Logins Moche',
-        '      Logins Uzo',
-        '      Logins My PT Empresas',
-        '      Logins AC PT Empresas',
-        '      Unique Logins',
-        '      Average Logins per User']
+    
     estilos = [cabecalho, cabecalho, total, normal, normal, normal, normal, normal, normal, normal]
-    bloco_principal_logins(ws, first_last_month, last_last_month, primeiro_ultimo_mes, ultimo, lista_unica, date_range, dados, tags, estilos)
+    bloco_principal_logins(ws, first_last_month, last_last_month, primeiro_ultimo_mes, ultimo, lista_unica, date_range, dados, tags_logins, estilos)
     # linha com o cabeçalho das semanas
     for coluna, iweek, iday in zip(range(7,13), (fifth_week, fourth_week, third_week, second_week, first_week), (fifth_day, fourth_day, third_day, second_day, first_day)): 
         ws.cell(row=2, column=len(date_range)+coluna, value="W"+str(iweek)).style=totalinhadir
@@ -109,7 +100,7 @@ def do_main()->tuple:
         ).style=normalshort
     medias: dict[str, float] = {item: 0 for item in lista}
     for linha, item in zip([7, 8, 9, 10, 11, 12], lista):
-        for ipos, (year, week) , sty in zip(range(7, 13), [(first_year, first_week), (second_year, second_week), (third_year, third_week), (fourth_year, fourth_week), (fifth_year, fifth_week)], [nmgrds, nmgrds, nmgrds, nmgrds, nmgrds]):
+        for ipos, (year, week) , sty in zip(range(7, 13), [(fifth_year, fifth_week), (fourth_year, fourth_week), (third_year, third_week), (second_year, second_week),(first_year, first_week)], [nmgrds, nmgrds, nmgrds, nmgrds, nmgrds]):
             temp = get_data_year_week(dados, 'logins_week', year, week, item)
             ws.cell(row=linha, column=len(date_range)+ipos, value=temp).style=sty
             #import ipdb; ipdb.set_trace()
@@ -247,19 +238,23 @@ def do_main()->tuple:
     coluna_ytd_mensal_tv_logins('logins_month_tv', first_year, ultimo.month, coluna, dados, ws, ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique'])
     coluna += 2
     tv_coluna_vazia(ws, 15, coluna, ['Qtd_Visits', 'Qtd_Visits_Intentional', 'Qtd_Visits_Unique', ''])
-    
+    contador: int = 0
     # -------------------------------------------------------------------------------------------------------
     # começa linhas dos novos users ac
     # -------------------------------------------------------------------------------------------------------
     coluna = 2
     novos_users_ac_cabecalhos(ws, coluna, 20, lista_tags_users)
     coluna += 1
-    valores_diarios_new_users("new_users_day", dados, ws, coluna, 20)
-    coluna += valores_diarios_users(dados, ws, coluna, 21, lista_segm, 'new_users_day', 'users_ac_day', 30)
-    month_total(dados, ws, coluna, 21, lista_segm, 'new_users_day', 'New_Users', 'users_ac_day', 30)
+    valores_diarios_new_users("new_users_day", dados, ws, coluna, 20, nmgrds)
+    coluna += valores_diarios_users(dados, ws, coluna, 21, lista_segm, 'new_users_day', 'users_ac_day', 30, nmgrds, nmgrds, nmgrdsund)
+    month_total(dados, ws, coluna, 21, lista_segm, 'new_users_day', 'New_Users', 'users_ac_day', 30,
+            normalalgray if contador <2 else nmgrdseurogray,
+            normalgrayunder if contador <2 else nmgrdsundeurogray,
+            normalgrayperc,
+            normalgrayunderpercenter)
     for i in range(3): ws.cell(row=19, column=coluna+i, value='').style=normalgrayperc
     coluna += 4
-    acrescentar_colunas_semanais(21, coluna, dados, ws, 'new_users_week', 'users_ac_week', 30, lista_segm)
+    acrescentar_colunas_semanais(21, coluna, dados, ws, 'new_users_week', 'users_ac_week', 30, lista_segm, nmgrds if contador <2 else nmgrdseuro, nmgrdsund if contador<2 else nmgrdsundeuro)
     coluna += 5
     #month_col = coluna
     # coluna += 1
@@ -270,7 +265,7 @@ def do_main()->tuple:
     ic(ultimo)
     primeiro_ano = (ultimo - pd.DateOffset(years=1) ) + timedelta(days=1)
     ic(primeiro_ano)
-    months_in_year(fifth_year, primeiro_ano.month, first_year, 21, coluna, dados, ws, lista_segm, 30, "users_ac_month", "new_users_month")
+    months_in_year(fifth_year, primeiro_ano.month, first_year, 21, coluna, dados, ws, lista_segm, 30, "users_ac_month", "new_users_month", nmgrds if contador <2 else nmgrdseuro, nmgrdsund if contador<2 else nmgrdsundeuro)
     coluna += 13
     month_summary_1([[first_year, first_week], [second_year, second_week], [third_year, third_week], [fourth_year, fourth_week], [fifth_year, fifth_week]], 20, coluna, ws, dados, "users_ac_month", "new_users_month", "New_Users", lista_segm, 29)
     for i in range(3): ws.cell(row=19, column=coluna+i, value='').style=normalgrayperc
@@ -281,22 +276,23 @@ def do_main()->tuple:
     # acaba as linhas de novos users ac
     
     for composto in lista_iteracoes:
-        [coluna, linha, fim, tags, listagem] = composto
+        [coluna, linha, fim, tags_iteracao, listagem] = composto
         fim += linha
-        novos_users_ac_cabecalhos(ws, coluna, linha, tags)
+        novos_users_ac_cabecalhos(ws, coluna, linha, tags_iteracao)
         coluna += 1
-        coluna += valores_diarios_users(dados, ws, coluna, linha, listagem, None, 'cpag_day', fim)
-        month_total(dados, ws, coluna, linha, listagem, None, None, 'cpag_day', fim)
+        coluna += valores_diarios_users(dados, ws, coluna, linha, listagem, None, 'cpag_day', fim, nmgrds if contador <2 else nmgrdseuro, nmgrds if contador <2 else nmgrdseuro, nmgrdsund if contador<2 else nmgrdsundeuro)
+        month_total(dados, ws, coluna, linha, listagem, None, None, 'cpag_day', fim, normalalgray if contador <2 else nmgrdseurogray, normalgrayunder if contador <2 else nmgrdsundeurogray, normalgrayperc, normalgrayunderpercenter)
         coluna += 4
-        acrescentar_colunas_semanais(linha, coluna, dados, ws, None, "cpag_week", fim, listagem)
+        acrescentar_colunas_semanais(linha, coluna, dados, ws, None, "cpag_week", fim, listagem, nmgrds if contador <2 else nmgrdseuro, nmgrdsund if contador<2 else nmgrdsundeuro)
         coluna += 5
         week_summary_1([[fifth_year, fifth_week], [fourth_year, fourth_week], [third_year, third_week], [second_year, second_week], [first_year, first_week]], linha-1, coluna, ws, dados, "cpag_week", None, None, listagem, fim-1)
         coluna += 3
-        months_in_year(fifth_year, primeiro_ano.month, first_year, linha, coluna, dados, ws, listagem, fim, "cpag_month", None)
+        months_in_year(fifth_year, primeiro_ano.month, first_year, linha, coluna, dados, ws, listagem, fim, "cpag_month", None, nmgrds if contador <2 else nmgrdseuro, nmgrdsund if contador<2 else nmgrdsundeuro)
         coluna += 13
         month_summary_1([[fifth_year, fifth_week], [fourth_year, fourth_week], [third_year, third_week], [second_year, second_week], [first_year, first_week]], linha-1, coluna, ws, dados, "cpag_month", None, None, listagem, fim-1)
         coluna += 4
         for i in range(linha-1, fim+1): ws.cell(row=i, column=coluna, value='').style=(normalgrayperc if i < fim else normalgrayunderperc)
+        contador += 1
         # fim das linhas dos cpag
         # Fim de Carregamentos por AC €
 
