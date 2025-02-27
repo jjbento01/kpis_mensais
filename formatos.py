@@ -201,6 +201,3 @@ def carregar_format(wb: Workbook)->None:
     wb.add_named_styel(nmgrdsund)
     wb.add_named_styel(nmgrdseurogray)
     wb.add_named_styel(nmgrdsundeurogray)
-
-    wb.add_named_styel(nmgrdseurogray)
-    wb.add_named_styel(nmgrdsundeurogray)

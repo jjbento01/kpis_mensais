@@ -320,7 +320,7 @@ def do_main()->tuple:
     coluna = 2
     novos_users_ac_cabecalhos(ws, coluna, 19)
     coluna += 1
-    valores_diarios_new_users("new_users_day", dados, ws, coluna, 20)
+    valores_diarios_new_users("new_users_day", dados, ws, coluna, 20, normal, nmgrds, nmgrdsund)
     coluna += valores_diarios_users(dados, ws, coluna, 21)
     month_total(dados, ws, coluna, 21)
     #coluna += 4
