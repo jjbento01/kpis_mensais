@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 #import pandas as pd
 import polars as pl
 from openpyxl import Workbook
-from openpyxl import worksheet
 from datetime import datetime, timedelta
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
 from openpyxl.styles import NamedStyle, Side
@@ -17,7 +16,7 @@ from icecream import ic
 
 
 from lista_queries import lista, lista_unica, lista_tags_users, lista_segm, lista_iteracoes, lista_queries_a_fazer, tags_logins
-from utilities import *
+from utilities import get_first_day_of_week, calc_date_values, range_needed_of_date, bloco_principal_logins, get_data_year_week, coluna_ytd_semanal_web_logins, colunas_mensais_web_logins, coluna_mensal_um_mes, coluna_mensal_4_meses, coluna_ytd_mensal_logins, coluna_vazia, cabecalho_tv_logins, valores_diarios_tv_logins, total_mes_analise, edate, total_mes_analise_var, calculate_week_columns, get_w48vs1w, get_w48vs4w, tv_ytd_semanal_web_logins, colunas_mensais_tv_logins, tv_make_last_month, tv_make_last_four_month, tv_coluna_vazia, novos_users_ac_cabecalhos, valores_diarios_new_users, valores_diarios_users, month_total, acrescentar_colunas_semanais, week_summary_1, months_in_year, month_summary_1, final_values
 from formatos import *
 from logins import *
 from logins_tv import *
