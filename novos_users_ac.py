@@ -72,11 +72,11 @@ def month_total(dados: dict, ws: worksheet, coluna: int, row_actual: int, lista_
             ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=nrmgray
             ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()!=0 else '')).style=nrmgryp
         else:
-            ws.cell(row=row_actual+j, column=coluna, value=pdl[seg].sum()).style=normalgrayunder
-            ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=normalgrayunder
-            ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()!=0 else '')).style=normalgrayunderperc
+            ws.cell(row=row_actual+j, column=coluna, value=pdl[seg].sum()).style=nrmgrayund
+            ws.cell(row=row_actual+j, column=coluna+1, value=pde[seg].sum()).style=nrmgrayund
+            ws.cell(row=row_actual+j, column=coluna+2, value=((pdl[seg].sum()/pde[seg].sum() - 1) if pde[seg].sum()!=0 else '')).style=nrmgrypund
 
-def acrescentar_colunas_semanais(inicio: int, coluna: int, dados: dict[str, pl.DataFrame], ws: worksheet, head: str, body: str, limite_maximo: int, lista_segm: list[str])->None:
+def acrescentar_colunas_semanais(inicio: int, coluna: int, dados: dict[str, pl.DataFrame], ws: worksheet, head: str, body: str, limite_maximo: int, lista_segm: list[str], nmr: any, nmrsund: any)->None:
     if head is not None:
         df_escolhida_new: pl.DataFrame=dados[head].with_columns(
             pl.struct(["Year", "Week"]).map_elements(
@@ -98,12 +98,12 @@ def acrescentar_colunas_semanais(inicio: int, coluna: int, dados: dict[str, pl.D
     for i, row in enumerate(lista_segm):
         for j, col in enumerate(df_escolhida_acc[row].to_list()):
             if (i+inicio) < limite_maximo:
-                ws.cell(row=inicio+i, column=coluna+j, value=col).style=nmgrds
+                ws.cell(row=inicio+i, column=coluna+j, value=col).style=nmr
             else:
-                ws.cell(row=inicio+i, column=coluna+j, value=col).style=nmgrdsund
+                ws.cell(row=inicio+i, column=coluna+j, value=col).style=nmrsund
     if head is not None:
         for i, row in enumerate(df_escolhida_new.iter_rows()):
-            ws.cell(row=inicio-1, column=coluna+i, value=row[0]).style=nmgrds
+            ws.cell(row=inicio-1, column=coluna+i, value=row[1]).style=nmr
         
 def coluna_ytd_semanal_logins(
     ident_de_dados: str,
@@ -257,7 +257,7 @@ def months_in_year(
     for i, row in enumerate(dados_df.iter_rows()):
         lista_row = {k: v for k, v in zip(dados_df.columns, row)}
         for i, seg in enumerate(lista_segm): 
-            ws.cell(row=i+linha, column=(mes+coluna), value = lista_row[seg]).style=(nmgrds if linha+i<listagem_maximo else nmgrdsund)
+            ws.cell(row=i+linha, column=(mes+coluna), value = lista_row[seg]).style=(nmr if linha+i<listagem_maximo else nmrsund)
         if mes + 1 > 12:
             mes = 1
             ano += 1
@@ -267,7 +267,7 @@ def months_in_year(
     if ident_local is not None:
         dados_idf = dados[ident_local].with_columns((pl.col("Year").cast(pl.Utf8) + "-" + pl.col("Month").cast(pl.Utf8) + "-01").str.strptime(pl.Date, "%Y-%m-%d").alias("Data"))
         for i, row in enumerate(dados_idf.sort(by=["Data"])[-12:].iter_rows()):
-            ws.cell(row=linha-1, column=(coluna +  i+ 1), value = row[2]).style=nmgrds
+            ws.cell(row=linha-1, column=(coluna +  i+ 1), value = row[2]).style=nmr
         
 def month_summary_1(
     lista_pares: list[list[int, int]], 
