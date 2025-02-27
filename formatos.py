@@ -98,6 +98,26 @@ nmgrdsund.font = Font(name='Calibri',bold=False, size=8)
 nmgrdsund.number_format = '#,##'   
 nmgrdsund.border = Border(bottom=Side(style='thin', color="000000"))
 
+nmgrdseuro = NamedStyle(name="nmgrdseuro")
+nmgrdseuro.font = Font(name='Calibri',bold=False, size=8)
+nmgrdseuro.number_format = '#,## €'
+
+nmgrdseurogray = NamedStyle(name="nmgrdseurogray")
+nmgrdseurogray.font = Font(name='Calibri',bold=False, size=8)
+nmgrdseurogray.fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+nmgrdseurogray.number_format = '#,## €'
+
+nmgrdsundeuro = NamedStyle(name="nmgrdsundeuro")
+nmgrdsundeuro.font = Font(name='Calibri',bold=False, size=8)
+nmgrdsundeuro.number_format = '#,## €'   
+nmgrdsundeuro.border = Border(bottom=Side(style='thin', color="000000"))
+
+nmgrdsundeurogray = NamedStyle(name="nmgrdsundeurogray")
+nmgrdsundeurogray.font = Font(name='Calibri',bold=False, size=8)
+nmgrdsundeurogray.number_format = '#,## €'   
+nmgrdsundeurogray.fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+nmgrdsundeurogray.border = Border(bottom=Side(style='thin', color="000000"))
+
 normalgray = NamedStyle(name="normalgray")
 normalgray.font = Font(name='Calibri',bold=False, size=8)
 normalgray.fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
@@ -159,3 +179,5 @@ def carregar_format(wb: Workbook)->None:
     wb.add_named_style(monthyearsimple)
     wb.add_named_style(normalgrayunderpercenter)
     wb.add_named_styel(nmgrdsund)
+    wb.add_named_styel(nmgrdseurogray)
+    wb.add_named_styel(nmgrdsundeurogray)

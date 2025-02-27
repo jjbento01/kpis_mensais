@@ -52,7 +52,19 @@ lista_unica: list = [
     "Qtd_Logins_ACE"
 ]
 
-lista_segm = [
+tags_logins: list = [
+        'Área de Cliente',
+        '',
+        'Logins Web',
+        '      Logins My Meo',
+        '      Logins Moche',
+        '      Logins Uzo',
+        '      Logins My PT Empresas',
+        '      Logins AC PT Empresas',
+        '      Unique Logins',
+        '      Average Logins per User']
+
+lista_segm: list = [
         'ACC_Total',
         'ACC_Consumo',
         'ACC_Moche',
@@ -64,7 +76,7 @@ lista_segm = [
         'ACE_Altice_Empresas',
         'Altice_Empresas_Total']
 
-lista_tags_users = [
+lista_tags_users: list = [
     'Logins',
     '      New First Logins',
     '      ACC Total*',
