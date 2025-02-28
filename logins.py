@@ -153,8 +153,17 @@ def coluna_mensal_4_meses(dados: dict, ws: worksheet, coluna: int, lista: list, 
     ws.cell(row=13, column=coluna, value=lista_lg_us[-1]/(sum(lista_lg_us[-5:-1])/4)-1).style=normalgrayunderperc
 
 def coluna_vazia(ws: worksheet, coluna: int):
+    ws.cell(row=2, column=coluna, value="").style=tlinhagraypercenter
+    ws.cell(row=3, column=coluna, value="Avg.YTD").style=normalgrayunderpercenter
+    ws.cell(row=6, column=coluna, value="").style=tlinhagrayperc
+    for line in range(5):
+        ws.cell(row=7+line, column=coluna, value="").style=normalgrayperc
+    ws.cell(row=12, column=coluna, value="").style=normalgrayperc
+    ws.cell(row=13, column=coluna, value="").style=normalgrayunderperc
+
+def coluna_vazia_fim(ws: worksheet, coluna: int, ultimo:datetime):
     ws.cell(row=2, column=coluna, value="AsIs").style=tlinhagraypercenter
-    ws.cell(row=3, column=coluna, value="Avg.4m").style=normalgrayunderpercenter
+    ws.cell(row=3, column=coluna, value=ultimo.strftime("%y/%b")).style=normalgrayunderpercenter
     ws.cell(row=6, column=coluna, value="").style=tlinhagrayperc
     for line in range(5):
         ws.cell(row=7+line, column=coluna, value="").style=normalgrayperc

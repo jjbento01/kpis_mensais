@@ -150,14 +150,12 @@ def coluna_mensal_4_meses(dados: dict, ws: worksheet, coluna: int, lista: list, 
     ano_corrente = ano_a_um_mes
     mes_corrente = mes_a_um_mes
     lista_acumula = [0]*len(lista)
-
     for _ in range(4):
         data_anterior = datetime(ano_corrente, mes_corrente, 1) - timedelta(days=1)
         ano_corrente = data_anterior.year
         mes_corrente = data_anterior.month
         for i, item in enumerate(lista):
             lista_acumula[i]+=dados['logins_month'].filter((pl.col('Year')==ano_corrente)&(pl.col('Month')==mes_corrente))[item].to_list()[0]
-
     lista_acumula_total = [item/4.0 for item in lista_acumula]
     lista_atual=[dados['logins_month'].filter((pl.col('Year')==ano_a_um_mes)&(pl.col('Month')==mes_a_um_mes))[item].to_list()[0] for item in lista]
     total_menos_um = sum(lista_acumula_total[:-1])
@@ -200,7 +198,7 @@ def bloco_principal_logins(
     primeiro_ultimo_mes: datetime,
     ultimo: datetime,
     lista_unica: list,
-    date_range: list,
+    date_range_ex: list,
     dados: dict,
     tags: list,
     estilos: list):
@@ -220,7 +218,7 @@ def bloco_principal_logins(
     logins_acpte_1=0
     logins_unique=0
     logins_unique_1=0
-    for i,data in enumerate(date_range):
+    for i,data in enumerate(date_range_ex):
         #ic(data)
         ws.cell(row=2, column=3+i, value=day_of_week[data.weekday()]).style=dayweek
         ws.cell(row=3, column=3+i, value=((data - datetime(1899, 12, 30).date()).days)).style=normalshort
@@ -260,11 +258,11 @@ def bloco_principal_logins(
         logins_total_1+=soma if data>=first_last_month.date() and data<=last_last_month.date() else 0
 
     for i, label1, label2 in zip(range(3, 6), ((ultimo - datetime(1899, 12, 30)), "", ""), ("Total", "M-1", "MoM")):
-        ws.cell(row=2, column=len(date_range)+i, value=label1).style=monthyear
-        ws.cell(row=3, column=len(date_range)+i, value=label2).style=normalgrayunder
-        ws.cell(row=13, column=len(date_range)+i, value="").style=normalgrayunder
+        ws.cell(row=2, column=len(date_range_ex)+i, value=label1).style=monthyear
+        ws.cell(row=3, column=len(date_range_ex)+i, value=label2).style=normalgrayunder
+        ws.cell(row=13, column=len(date_range_ex)+i, value="").style=normalgrayunder
 
-    ws.column_dimensions[ws.cell(row=2, column=len(date_range)+6).column_letter].width=3
+    ws.column_dimensions[ws.cell(row=2, column=len(date_range_ex)+6).column_letter].width=3
     for ipos, sty, vals in zip(range(6, 13),
                         [[totalinhagray, totalinhagray, tlinhagrayperc],
                         [normalgray, normalgray, normalgrayperc],
@@ -281,4 +279,4 @@ def bloco_principal_logins(
                         [logins_acpte, logins_acpte_1, logins_acpte/logins_acpte_1-1 if logins_acpte_1!=0 else 0],
                         [logins_unique, logins_unique_1, logins_unique/logins_unique_1-1 if logins_unique_1!=0 else 0]]):
         for jpos, esc, valor in zip(range(3, 6), sty, vals):
-            ws.cell(row=ipos, column=len(date_range)+jpos, value=valor).style=esc
+            ws.cell(row=ipos, column=len(date_range_ex)+jpos, value=valor).style=esc

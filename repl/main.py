@@ -184,9 +184,7 @@ def do_main()->tuple:
     ws.cell(row=6, column=coluna, value=total_fifth/total_fourth-1).style=tlinhagrayperc
     ws.cell(row=13, column=coluna, value=per_user_list[-1]/per_user_list[-2]-1).style=normalgrayunderperc
 
-    for i, primeiralinha, segundalinha in zip(range(3),
-                                              ("W"+str(fifth_week)+" vs.", "", ""),
-                                              ("1w", "Avg.4w", "Avg.YTD")):
+    for i, primeiralinha, segundalinha in zip(range(3), ("W"+str(first_week)+" vs.", "", ""), ("1w", "Avg.4w", "Avg.YTD")):
         ws.cell(row=2, column=coluna+i, value=primeiralinha).style=tlinhagrayperc
         ws.cell(row=3, column=coluna+i, value=segundalinha).style=normalgrayunder
 
@@ -201,19 +199,10 @@ def do_main()->tuple:
     ]
     total_val = valores_totais[-1]/(sum([medias[key] for key in medias.keys()][:-1])/4)-1
     ws.cell(row=6, column=coluna+1, value=total_val).style=tlinhagrayperc
-    for i, valor in enumerate(valores_inter):
-        ws.cell(row=7+i, column=coluna+1, value=list(valor)[0]).style=normalgrayperc
+    for i, valor in enumerate(valores_inter): ws.cell(row=7+i, column=coluna+1, value=list(valor)[0]).style=normalgrayperc
     total_fim = per_user_list[-1]/(sum(per_user_list[:-1])/4)-1
     ws.cell(row=13, column=coluna+1, value=total_fim).style=normalgrayunderperc
-    coluna_ytd_semanal_web_logins('logins_week',
-                                  "Qtd_Logins_Unique",
-                                  fifth_year,
-                                  fifth_week,
-                                  coluna,
-                                  dados,
-                                  ws,
-                                  lista_unica,
-                                  lista)
+    coluna_ytd_semanal_web_logins('logins_week', "Qtd_Logins_Unique", fifth_year, fifth_week, coluna, dados, ws, lista_unica, lista)
     letra_no_fim = ws.cell(row=5, column=(len(date_range)-5)).column_letter
     ws.column_dimensions.group('C', letra_no_fim, hidden=True)
     ws.column_dimensions[ws.cell(row=2, column=coluna+3).column_letter].width=3

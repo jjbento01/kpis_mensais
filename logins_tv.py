@@ -252,8 +252,9 @@ def coluna_ytd_mensal_tv_logins(
 
 def tv_coluna_vazia(ws: worksheet, linha: int, coluna: int, lista: list)->None:
     ws.cell(row=linha-1, column=coluna, value='').style=normalgray
-    for i, item in enumerate(lista):
-        if i == len(lista):
+    for i, _ in enumerate(lista):
+        if i == len(lista)-1:
             ws.cell(row=linha+i, column=coluna, value='').style=normalgrayunderperc
-        ws.cell(row=linha+i, column=coluna, value='').style=normalgray
+        else:
+            ws.cell(row=linha+i, column=coluna, value='').style=normalgray
         

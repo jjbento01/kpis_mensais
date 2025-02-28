@@ -333,7 +333,8 @@ def month_summary_1(
         ws.cell(row=linha, column=coluna+1, value=perc[0]).style=normalgrayperc
         total_denom = dados[ind_total].filter(pl.col('Data')<=ultima_data)["New_Users"].sum()
         perc = primeira_coluna_denom["New_Users"]/total_denom
-        ws.cell(row=linha, column=coluna+2, value=perc[0]).style=normalgrayperc
+        #ws.cell(row=linha, column=coluna+2, value=perc[0]).style=normalgrayperc
+        ws.cell(row=linha, column=coluna+2, value='').style=normalgrayperc
     
     for i, item in enumerate(lista_segm):
         primeira_coluna_denom = dados[indice].filter((pl.col('Year')==year_ultimo)&(pl.col('Month')==month_ultimo))[item]
@@ -345,9 +346,13 @@ def month_summary_1(
         ws.cell(row=linha+i+1, column=coluna+1, value=perc).style=(normalgrayperc if i+linha < listagem_maximo else normalgrayunderperc)
         total_denom = dados[indice].filter(pl.col('Data')<ultima_data)[item].sum()
         perc = primeira_coluna_denom[0]/total_denom if total_denom != 0.0 else ''
-        ws.cell(row=linha+i+1, column=coluna+2, value=perc).style=(normalgrayperc if i+linha < listagem_maximo else normalgrayunderperc)
+        #ws.cell(row=linha+i+1, column=coluna+2, value=perc).style=(normalgrayperc if i+linha < listagem_maximo else normalgrayunderperc)
+        ws.cell(row=linha+i+1, column=coluna+2, value='').style=(normalgrayperc if i+linha < listagem_maximo else normalgrayunderperc)
         
 def final_values(ultimo: datetime, linha: int,coluna: int, ws: worksheet, dados: dict[str, pl.DataFrame], ident: str, ident_tot: str, lista_segm: list[str])->None:
     ws.cell(row=linha, column=coluna, value = dados[ident_tot].sort(by=["Data"])["New_Users"][0]).style=normalgray
     for i, seg in enumerate(lista_segm):
-        ws.cell(row=linha+i+1, column=coluna, value = dados[ident][seg].to_list()[0]).style=normalgray
+        if i == len(lista_segm)-1:
+            ws.cell(row=linha+i+1, column=coluna, value = dados[ident][seg].to_list()[0]).style=normalgrayunder
+        else:
+            ws.cell(row=linha+i+1, column=coluna, value = dados[ident][seg].to_list()[0]).style=normalgray
